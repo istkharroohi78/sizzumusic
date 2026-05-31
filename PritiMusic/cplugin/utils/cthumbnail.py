@@ -8,16 +8,45 @@ from py_yt import VideosSearch
 from PritiMusic import app
 from PritiMusic.utils.database import clonebotdb
 
-# Helper: Circular crop
-def circle(img):
-    img = img.convert("RGBA")
+# Helper: Glowing Circular Crop
+def get_glowing_circle(image):
+    """
+    Crops the image into a circle and applies a multi-layered glow:
+    Yellow -> White -> Pink -> White, with a solid white border.
+    """
+    img = image.convert("RGBA")
     size = min(img.size)
+    
+    # 1. Crop image into a perfect circle
     img = ImageOps.fit(img, (size, size), centering=(0.5, 0.5))
     mask = Image.new("L", (size, size), 0)
     ImageDraw.Draw(mask).ellipse((0, 0, size, size), fill=255)
-    output = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-    output.paste(img, (0, 0), mask)
-    return output
+    circular_img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    circular_img.paste(img, (0, 0), mask)
+
+    # 2. Setup canvas for the glow effect
+    offset = 50  # Padding for the glow
+    glow_size = size + (offset * 2)
+    glow = Image.new("RGBA", (glow_size, glow_size), (0, 0, 0, 0))
+    draw_glow = ImageDraw.Draw(glow)
+
+    # 3. Draw concentric circles for the glow effect
+    draw_glow.ellipse((5, 5, glow_size-5, glow_size-5), fill=(255, 255, 0, 60))        # Outer Yellow
+    draw_glow.ellipse((15, 15, glow_size-15, glow_size-15), fill=(255, 255, 255, 80))  # Outer White
+    draw_glow.ellipse((25, 25, glow_size-25, glow_size-25), fill=(255, 105, 180, 150)) # Pink
+    draw_glow.ellipse((35, 35, glow_size-35, glow_size-35), fill=(255, 255, 255, 200)) # Inner White
+    
+    # Apply Gaussian Blur to make the glow smooth
+    glow = glow.filter(ImageFilter.GaussianBlur(15))
+    
+    # 4. Draw a solid white border directly around the image
+    draw_border = ImageDraw.Draw(glow)
+    draw_border.ellipse((offset - 4, offset - 4, size + offset + 4, size + offset + 4), outline="white", width=8)
+
+    # 5. Paste the circular image on top of the glowing background
+    glow.paste(circular_img, (offset, offset), circular_img)
+    
+    return glow, offset
 
 # Helper: Text Truncator
 def clear(text, max_length=25):
@@ -68,23 +97,41 @@ async def get_thumb(videoid, user_id, client):
     # 4. Drawing Logic
     bg = Image.open(f"cache/temp_{videoid}.jpg").convert("RGBA").resize((1920, 1080))
     background = bg.filter(ImageFilter.GaussianBlur(25)).point(lambda p: p * 0.4)
+    
+    # --- SOLID BLACK CARD ---
+    black_card = Image.new("RGBA", background.size, (0, 0, 0, 0))
+    draw_card = ImageDraw.Draw(black_card)
+    # Fill is now solid black (0, 0, 0, 255) instead of transparent
+    draw_card.rounded_rectangle((40, 40, 1880, 940), radius=60, fill=(0, 0, 0, 255), outline=(132, 224, 240, 200), width=6)
+    
+    # Paste black card onto blurred background
+    background = Image.alpha_composite(background, black_card)
     draw = ImageDraw.Draw(background)
 
-    # UI Glass Box
-    draw.rounded_rectangle((40, 40, 1880, 940), radius=60, fill=(0, 0, 0, 100), outline=(132, 224, 240, 200), width=6)
+    # --- RAIN EFFECT ---
+    for _ in range(300):
+        rx = random.randint(50, 1870)
+        ry = random.randint(50, 930)
+        length = random.randint(10, 30)
+        draw.line([(rx, ry), (rx + 5, ry + length)], fill=(255, 255, 255, 50), width=1)
     
-    f1 = ImageFont.truetype("PritiMusic/assets/font.ttf", 65)
-    f2 = ImageFont.truetype("PritiMusic/assets/font2.ttf", 45)
-    br = ImageFont.truetype("PritiMusic/assets/font2.ttf", 50)
+    try:
+        f1 = ImageFont.truetype("PritiMusic/assets/font.ttf", 65)
+        f2 = ImageFont.truetype("PritiMusic/assets/font2.ttf", 45)
+        br = ImageFont.truetype("PritiMusic/assets/font2.ttf", 50)
+    except:
+        f1 = f2 = br = ImageFont.load_default()
 
-    # Paste Images
-    yt_img = circle(bg.resize((500, 500)))
-    background.paste(yt_img, (80, 250))
+    # --- GLOWING IMAGES ---
+    # YouTube Thumbnail
+    yt_img_glowing, yt_offset = get_glowing_circle(bg.resize((500, 500)))
+    background.paste(yt_img_glowing, (80 - yt_offset, 250 - yt_offset), yt_img_glowing)
     
+    # User Profile Image
     u_photo = await download_user_photo(user_id)
     if u_photo:
-        u_img = circle(Image.open(u_photo).resize((450, 450)))
-        background.paste(u_img, (1350, 250))
+        u_img_glowing, u_offset = get_glowing_circle(Image.open(u_photo).resize((450, 450)))
+        background.paste(u_img_glowing, (1350 - u_offset, 250 - u_offset), u_img_glowing)
 
     # Fetch User Name
     try:
@@ -101,7 +148,7 @@ async def get_thumb(videoid, user_id, client):
     # Branding & Request
     draw.text((100, 100), f"BOT: {bot_name}", fill="yellow", font=br)
     draw.text((1400, 100), f"OWNER: {owner_name}", fill="cyan", font=br)
-    draw.text((1350, 880), f"Requested by: {user_name}", fill="white", font=f2)
+    draw.text((1350, 880), f"Requested by: {user_name[:15]}", fill="white", font=f2)
 
     # Up-Down Waveform
     for i in range(45):
@@ -110,6 +157,8 @@ async def get_thumb(videoid, user_id, client):
         draw.rounded_rectangle((700 + i*25, y_pos, 715 + i*25, y_pos + h), radius=5, fill=(219, 133, 166))
 
     background.convert("RGB").save(filename)
-    os.remove(f"cache/temp_{videoid}.jpg")
-    if u_photo and os.path.exists(u_photo): os.remove(u_photo)
+    if os.path.exists(f"cache/temp_{videoid}.jpg"):
+        os.remove(f"cache/temp_{videoid}.jpg")
+    if u_photo and os.path.exists(u_photo): 
+        os.remove(u_photo)
     return filename
