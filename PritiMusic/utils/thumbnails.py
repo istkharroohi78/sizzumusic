@@ -68,11 +68,9 @@ async def get_thumb(videoid, user_id, user_name):
         bg = Image.open(f"cache/temp_{videoid}.jpg").convert("RGBA").resize((1920, 1080))
         background = bg.filter(ImageFilter.GaussianBlur(25)).point(lambda p: p * 0.35)
         
-        # Black Card
-        card_rect = (40, 40, 1880, 940)
         black_card = Image.new("RGBA", background.size, (0, 0, 0, 0))
         draw_card = ImageDraw.Draw(black_card)
-        draw_card.rounded_rectangle(card_rect, radius=60, fill=(0, 0, 0, 255), outline=(132, 224, 240, 200), width=6)
+        draw_card.rounded_rectangle((40, 40, 1880, 940), radius=60, fill=(0, 0, 0, 255), outline=(132, 224, 240, 200), width=6)
         background = Image.alpha_composite(background, black_card)
         draw = ImageDraw.Draw(background, "RGBA")
         
@@ -84,11 +82,7 @@ async def get_thumb(videoid, user_id, user_name):
         except:
             f1 = f2 = br = f_small = ImageFont.load_default()
 
-        # Branding
-        draw_text_with_glow(draw, (80, 50), "BETA BOT HUB", br, (132, 224, 240), (0, 255, 255, 100))
-        draw_text_with_glow(draw, (1480, 50), "THE SHIV", br, (255, 60, 160), (255, 0, 170, 100))
-
-        # Circles
+        # Images
         yt_img_glowing, yt_offset = get_glowing_circle(bg.resize((500, 500)))
         background.paste(yt_img_glowing, (80 - yt_offset, 250 - yt_offset), yt_img_glowing)
         u_photo = await download_user_photo(user_id)
@@ -98,42 +92,40 @@ async def get_thumb(videoid, user_id, user_name):
 
         # Texts
         draw.text((650, 300), (title[:22] + "...") if len(title) > 22 else title, fill="white", font=f1)
-        draw.text((650, 400), f"Artist: {channel}", fill=(220, 220, 220), font=f2)
-        draw.text((650, 460), f"Views: {views}", fill=(190, 190, 190), font=f2)
-        draw.text((650, 520), f"Duration: {duration}", fill=(190, 190, 190), font=f2)
+        draw.text((650, 400), f"Artist: {channel}", fill=(200, 200, 200), font=f2)
+        draw.text((650, 470), f"Views: {views}", fill=(150, 150, 150), font=f2)
+        draw.text((650, 530), f"Duration: {duration}", fill=(150, 150, 150), font=f2)
 
-        # --- UNIFORM WAVEFORM ---
-        bar_count = 64; bar_width = 4; bar_gap = 10
+        # --- SWELL WAVEFORM ---
+        bar_count = 64; bar_width = 5; bar_gap = 12
         total_width = bar_count * bar_gap
         start_x = (1920 - total_width) / 2; base_y = 780
         for i in range(bar_count):
-            dist = abs(i - (bar_count / 2))
-            h = 35 if dist < 5 else 20
-            x0 = start_x + (i * bar_gap)
-            x1 = x0 + bar_width
-            y0 = base_y - h
-            y1 = base_y + h
-            # FIX: Ensure x1 > x0
-            if x1 > x0:
-                fill_color = (255, 255, 255, 255) if i < (bar_count // 2) else (150, 150, 150, 200)
-                draw.rounded_rectangle((x0, y0, x1, y1), radius=2, fill=fill_color)
+            if i < 15: h = 15 + (i * 2)
+            elif i < 48: h = 45 
+            else: h = 45 - ((i - 48) * 2)
+            x0 = start_x + (i * bar_gap); x1 = x0 + bar_width
+            y0 = base_y - h; y1 = base_y + h
+            fill_color = (255, 255, 255, 255) if i < (bar_count // 2) else (150, 150, 150, 200)
+            if x1 > x0: draw.rounded_rectangle((x0, y0, x1, y1), radius=3, fill=fill_color)
 
-        # --- PROCESSING LINE & ICONS ---
-        line_y = base_y + 60
-        draw.line([(start_x, line_y), (start_x + total_width, line_y)], fill=(100, 100, 100), width=1)
+        # --- PROGRESS LINE & ICONS ---
+        line_y = base_y + 80
+        draw.line([(start_x, line_y), (start_x + total_width, line_y)], fill=(80, 80, 80), width=1)
         draw.line([(start_x, line_y), (start_x + (total_width // 2), line_y)], fill=(255, 255, 255), width=2)
-        
-        thumb_x = start_x + (total_width // 2)
-        draw.ellipse((thumb_x - 8, line_y - 8, thumb_x + 8, line_y + 8), fill="white")
-        
+        draw.ellipse(((start_x + total_width // 2) - 8, line_y - 8, (start_x + total_width // 2) + 8, line_y + 8), fill="white")
         draw.text((start_x, line_y + 20), "00:00", fill="white", font=f_small)
         draw.text((start_x + total_width - 80, line_y + 20), duration, fill="white", font=f_small)
 
-        ctrl_y = line_y + 50; mid_x = 960
-        draw.ellipse((mid_x - 25, ctrl_y - 25, mid_x + 25, ctrl_y + 25), outline="white", width=2)
-        draw.polygon([(mid_x - 6, ctrl_y - 10), (mid_x + 10, ctrl_y), (mid_x - 6, ctrl_y + 10)], fill="white")
-        draw.ellipse((mid_x - 60, ctrl_y - 15, mid_x - 35, ctrl_y + 15), outline="white", width=1)
-        draw.ellipse((mid_x + 35, ctrl_y - 15, mid_x + 60, ctrl_y + 15), outline="white", width=1)
+        ctrl_y = line_y + 60; mid_x = 960
+        draw.ellipse((mid_x - 30, ctrl_y - 30, mid_x + 30, ctrl_y + 30), outline="white", width=3)
+        draw.polygon([(mid_x - 8, ctrl_y - 12), (mid_x + 14, ctrl_y), (mid_x - 8, ctrl_y + 12)], fill="white")
+        draw.ellipse((mid_x - 80, ctrl_y - 20, mid_x - 45, ctrl_y + 20), outline="white", width=2)
+        draw.ellipse((mid_x + 45, ctrl_y - 20, mid_x + 80, ctrl_y + 20), outline="white", width=2)
+
+        # Branding
+        draw_text_with_glow(draw, (80, 975), "BETA BOT HUB", br, (132, 224, 240), (0, 255, 255, 100))
+        draw_text_with_glow(draw, (1480, 975), "THE SHIV", br, (255, 60, 160), (255, 0, 170, 100))
 
         background.convert("RGB").save(final_path, "PNG")
         return final_path
