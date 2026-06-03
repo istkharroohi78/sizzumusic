@@ -5,7 +5,8 @@ import aiofiles
 import aiohttp
 import math
 from PIL import (Image, ImageDraw, ImageEnhance, ImageFilter, ImageFont, ImageOps)
-from py_yt import VideosSearch
+# Nayi library yahan update kar di gayi hai 👇
+from youtubesearchpython.__future__ import VideosSearch
 from PritiMusic import app
 
 # --- HELPER FUNCTIONS ---
