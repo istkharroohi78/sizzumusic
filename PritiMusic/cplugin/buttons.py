@@ -259,6 +259,12 @@ def panel_markup_clone(_, vidid, chat_id):
             styled_button(text="II", callback_data=f"ADMIN Pause|{chat_id}", style=ButtonStyle.DANGER),
             styled_button(text="‣‣I", callback_data=f"ADMIN Skip|{chat_id}", style=ButtonStyle.PRIMARY),
         ],
+        [
+            InlineKeyboardButton(text="<- 20s", callback_data=f"ADMIN SeekBack|{chat_id}"),
+            InlineKeyboardButton(text="🔁", callback_data=f"ADMIN Loop|{chat_id}"),
+            InlineKeyboardButton(text="🔀", callback_data=f"ADMIN Shuffle|{chat_id}"),
+            InlineKeyboardButton(text="20s + ->", callback_data=f"ADMIN SeekForward|{chat_id}"),
+        ],
         [clone_button()],
         [styled_button(text=_["CLOSE_BUTTON"], callback_data="close", style=ButtonStyle.DANGER)]
     ]
