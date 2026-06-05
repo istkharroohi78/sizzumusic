@@ -404,11 +404,12 @@ class Call(PyTgCalls):
                     title_lower = str(raw_title).lower()
                     last_vidid = str(popped.get("vidid", ""))
 
-                    # Phase 1: Smart Language Autoplay with Strict Filters
+                    # ==========================================
+                    # Phase 1: Smart Language Autoplay
+                    # ==========================================
                     try:
                         from youtubesearchpython.__future__ import VideosSearch
                         
-                        # Optimized queries to force single official songs
                         lang_pools = {
                             "Hindi": ["hindi single track official video", "bollywood latest lyrical song", "trending hindi song official"],
                             "Punjabi": ["latest punjabi single official video", "punjabi trending track lyrical"],
@@ -435,16 +436,15 @@ class Call(PyTgCalls):
                                 break
 
                         search_query = random.choice(lang_pools[detected_lang])
-                        search = VideosSearch(search_query, limit=30)
+                        search = VideosSearch(search_query, limit=15)
                         result = await search.next()
                         
                         if result and result.get("result"):
                             valid_choices = []
                             for res in result["result"]:
-                                if str(res.get("id")) == last_vidid:
+                                if not res.get("id") or str(res.get("id")) == last_vidid:
                                     continue
                                 
-                                # STRICT AUTOPLAY DURATION CHECKING
                                 next_dur = str(res.get("duration") or "0:00")
                                 dur_sec = 0
                                 if next_dur and ":" in next_dur:
@@ -493,33 +493,66 @@ class Call(PyTgCalls):
                     except Exception as e:
                         LOGGER(__name__).warning(f"Smart Autoplay Error: {e}")
 
-                    # Phase 2: Native YouTube Recommendation Fallback (Also strictly capped)
+                    # ==========================================
+                    # Phase 2: NEW CRASH-PROOF FALLBACK (No YouTube.autoplay)
+                    # ==========================================
                     if not success:
                         try:
-                            # Strict limit in fallback: 15 Minutes Maximum
-                            recommendation = await YouTube.autoplay(
-                                last_vidid,
-                                raw_title,
-                                max_duration=900, 
-                            )
-                            if recommendation:
-                                db[chat_id].append({
-                                    "title": recommendation["title"].title(),
-                                    "dur": recommendation["duration_min"],
-                                    "streamtype": popped.get("streamtype", "audio"),
-                                    "by": "Autoplay",
-                                    "user_id": 0,
-                                    "chat_id": chat_id,
-                                    "file": f"vid_{recommendation['vidid']}",
-                                    "vidid": recommendation["vidid"],
-                                    "seconds": recommendation["duration_sec"],
-                                    "old_dur": recommendation["duration_min"],
-                                    "old_second": 0,
-                                    "played": 0,
-                                    "client": popped.get("client")
-                                })
+                            from youtubesearchpython.__future__ import VideosSearch
+                            
+                            # Hum purane song ke title ke aage "audio" lagakar dobara normal search kar rahe hain
+                            fallback_query = f"{raw_title} audio"
+                            search = VideosSearch(fallback_query, limit=10)
+                            result = await search.next()
+                            
+                            if result and result.get("result"):
+                                valid_choices = []
+                                for res in result["result"]:
+                                    if not res.get("id") or str(res.get("id")) == last_vidid:
+                                        continue
+                                    
+                                    next_dur = str(res.get("duration") or "0:00")
+                                    dur_sec = 0
+                                    if next_dur and ":" in next_dur:
+                                        parts = next_dur.split(":")
+                                        try:
+                                            if len(parts) == 2:
+                                                dur_sec = int(parts[0]) * 60 + int(parts[1])
+                                            elif len(parts) == 3:
+                                                dur_sec = int(parts[0]) * 3600 + int(parts[1]) * 60 + int(parts[2])
+                                        except ValueError:
+                                            pass
+                                    
+                                    # Fallback me bhi limit laga di gayi hai
+                                    if 30 <= dur_sec <= 900:
+                                        valid_choices.append((res, next_dur, dur_sec))
+                                        
+                                if valid_choices:
+                                    chosen_tuple = random.choice(valid_choices)
+                                    next_track = chosen_tuple[0]
+                                    next_dur = chosen_tuple[1]
+                                    duration_sec = chosen_tuple[2]
+                                    
+                                    next_vidid = str(next_track.get("id") or "")
+                                    next_title = str(next_track.get("title") or "Unknown Title").title()
+                                    
+                                    db[chat_id].append({
+                                        "vidid": next_vidid,
+                                        "title": next_title,
+                                        "by": "Autoplay Fallback",
+                                        "chat_id": chat_id,
+                                        "file": f"vid_{next_vidid}",
+                                        "streamtype": popped.get("streamtype", "audio"),
+                                        "user_id": 0,
+                                        "seconds": duration_sec,
+                                        "dur": next_dur,
+                                        "old_dur": next_dur,
+                                        "old_second": 0,
+                                        "played": 0,
+                                        "client": popped.get("client")
+                                    })
                         except Exception as e:
-                            LOGGER(__name__).warning(f"Native Autoplay fallback failed: {e}")
+                            LOGGER(__name__).warning(f"Fallback Autoplay Error: {e}")
 
             if not db.get(chat_id): 
                 await _clear_(chat_id)
@@ -537,8 +570,6 @@ class Call(PyTgCalls):
             except:
                 return
         else:
-            # THIS IS THE NORMAL QUEUE PROGRESSION LOGIC
-            # Normal user requests will flow through here without the 15-min limit!
             queued = check[0]["file"]
             language = await get_lang(chat_id)
             _ = get_string(language)
@@ -633,7 +664,6 @@ class Call(PyTgCalls):
                                 _["call_6"], disable_web_page_preview=True
                             )
                         except Exception:
-                            # 🛡️ ERRORLESS FIX: Safe Catch if message is deleted
                             return
                 
                 if not file_path or str(file_path) == "None":
@@ -668,7 +698,6 @@ class Call(PyTgCalls):
 
                 button = stream_markup(_, chat_id)
                 try:
-                    # 🛡️ ERRORLESS FIX: Prevent MessageIdInvalid Crash
                     await mystic.delete()
                 except Exception:
                     pass
