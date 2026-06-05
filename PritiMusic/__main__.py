@@ -1,6 +1,8 @@
-
 import asyncio
 import importlib
+import os
+import glob
+import shutil
 
 from pyrogram import idle
 from pytgcalls.exceptions import NoActiveGroupCall
@@ -13,6 +15,56 @@ from PritiMusic.plugins import ALL_MODULES
 from PritiMusic.utils.database import get_banned_users, get_gbanned
 from config import BANNED_USERS
 from PritiMusic.plugins.tools.clone import restart_bots
+
+
+# ==========================================
+# 🧹 CACHE SWEEPER: Start hone se pehle kachra saaf karega
+# ==========================================
+def clear_all_caches():
+    LOGGER(__name__).info("🧹 Sweeping old files for Main Bot and Clones...")
+    
+    # Folders jahan clones aur main bot files save karte hain
+    directories_to_clean = [
+        "downloads", 
+        "cache",
+        "playback" # Agar speedup stream ka folder hai
+    ]
+    
+    file_patterns = ["vid_*.mp4", "vid_*.m4a", "vid_*.webm", "*.webm", "*.mp4"]
+    
+    cleaned_count = 0
+    
+    # 1. Bahar ki files delete karna (Root directory)
+    for pattern in file_patterns:
+        for file in glob.glob(pattern):
+            try:
+                os.remove(file)
+                cleaned_count += 1
+            except:
+                pass
+                
+    # 2. Folders ke andar ka kachra saaf karna (Downloads/Cache)
+    for directory in directories_to_clean:
+        if os.path.exists(directory):
+            for filename in os.listdir(directory):
+                filepath = os.path.join(directory, filename)
+                try:
+                    if os.path.isfile(filepath):
+                        os.remove(filepath)
+                        cleaned_count += 1
+                    elif os.path.isdir(filepath):
+                        shutil.rmtree(filepath)
+                except Exception as e:
+                    LOGGER(__name__).warning(f"Could not remove {filepath}: {e}")
+                    
+    if cleaned_count > 0:
+        LOGGER(__name__).info(f"✅ Successfully swept {cleaned_count} leftover temporary files from all bots.")
+    else:
+        LOGGER(__name__).info("✅ Server storage is already clean.")
+
+# Execute immediately on startup
+clear_all_caches()
+# ==========================================
 
 
 async def init():
@@ -47,7 +99,7 @@ async def init():
     await Lucky.decorators()
     await restart_bots()
     LOGGER("PritiMusic").info(
-        "╔═════ஜ۩۞۩ஜ════╗\n  ☠︎︎𝗠𝗔𝗗𝗘 𝗕𝗬 𝗣𝗿𝗼𝗕𝗼t𝘀☠︎︎\n╚═════ஜ۩۞۩ஜ════╝"
+        "╔═════ஜ۩۞۩ஜ════╗\n  ☠︎︎𝗠𝗔𝗗𝗘 𝗕𝗬 THE SHIV𝘀☠︎︎\n╚═════ஜ۩۞۩ஜ════╝"
     )
     await idle()
     await app.stop()
