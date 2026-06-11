@@ -1,5 +1,3 @@
-# PritiMusic/plugins/admins/autoplay.py
-
 from pyrogram import filters
 from pyrogram.types import (
     Message,
@@ -7,6 +5,7 @@ from pyrogram.types import (
     InlineKeyboardButton,
     CallbackQuery,
 )
+from pyrogram.errors import MessageNotModified
 
 from PritiMusic import app
 from PritiMusic.utils.database.autoplay import (
@@ -14,11 +13,12 @@ from PritiMusic.utils.database.autoplay import (
     add_autoplay_group,
     remove_autoplay_group,
 )
+# Assuming AdminActualCheck or a similar decorator exists for callbacks
 from PritiMusic.utils.decorators import AdminRightsCheck
 from config import BANNED_USERS
 
 
-PHOTO_URL = "https://files.catbox.moe/wktt8l.jpg"
+PHOTO_URL = "https://files.catbox.moe/6r97s4.jpg"
 
 
 def get_panel(chat_id, enabled):
@@ -54,16 +54,6 @@ def get_panel(chat_id, enabled):
                     callback_data="AUTOPLAY_STATUS",
                 )
             ],
-            [
-                InlineKeyboardButton(
-                    "⚡ 𝐔ᴘᴅᴀᴛᴇs",
-                    url="https://t.me/KavyaBots",
-                ),
-                InlineKeyboardButton(
-                    "👑 𝐎ᴡɴᴇʀ",
-                    url="https://t.me/ll_Alexx_lll",
-                ),
-            ],
         ]
     )
 
@@ -78,7 +68,6 @@ def get_panel(chat_id, enabled):
 @AdminRightsCheck
 async def autoplay_mode(client, message: Message, _, chat_id):
     enabled = await is_autoplay_group(chat_id)
-
     caption, buttons = get_panel(chat_id, enabled)
 
     await message.reply_photo(
@@ -88,39 +77,53 @@ async def autoplay_mode(client, message: Message, _, chat_id):
     )
 
 
-@app.on_callback_query(filters.regex("^AUTOPLAY_ENABLE"))
+@app.on_callback_query(filters.regex("^AUTOPLAY_ENABLE") & ~BANNED_USERS)
 async def autoplay_enable(_, query: CallbackQuery):
     chat_id = int(query.data.split("|")[1])
+    
+    # Optional callback admin check verification
+    member = await app.get_chat_member(chat_id, query.from_user.id)
+    if member.status not in ["administrator", "creator"]:
+        return await query.answer("❌ You must be an admin to change this setting!", show_alert=True)
 
     await add_autoplay_group(chat_id)
-
     caption, buttons = get_panel(chat_id, True)
 
-    await query.message.edit_caption(
-        caption=caption,
-        reply_markup=buttons,
-    )
+    try:
+        await query.message.edit_caption(
+            caption=caption,
+            reply_markup=buttons,
+        )
+    except MessageNotModified:
+        pass
 
     await query.answer("Auto Play Enabled ✅")
 
 
-@app.on_callback_query(filters.regex("^AUTOPLAY_DISABLE"))
+@app.on_callback_query(filters.regex("^AUTOPLAY_DISABLE") & ~BANNED_USERS)
 async def autoplay_disable(_, query: CallbackQuery):
     chat_id = int(query.data.split("|")[1])
+    
+    # Optional callback admin check verification
+    member = await app.get_chat_member(chat_id, query.from_user.id)
+    if member.status not in ["administrator", "creator"]:
+        return await query.answer("❌ You must be an admin to change this setting!", show_alert=True)
 
     await remove_autoplay_group(chat_id)
-
     caption, buttons = get_panel(chat_id, False)
 
-    await query.message.edit_caption(
-        caption=caption,
-        reply_markup=buttons,
-    )
+    try:
+        await query.message.edit_caption(
+            caption=caption,
+            reply_markup=buttons,
+        )
+    except MessageNotModified:
+        pass
 
     await query.answer("Auto Play Disabled ❌")
 
 
-@app.on_callback_query(filters.regex("^AUTOPLAY_STATUS"))
+@app.on_callback_query(filters.regex("AUTOPLAY_STATUS"))
 async def autoplay_status(_, query: CallbackQuery):
     await query.answer(
         "Auto Play Status Panel",
