@@ -112,19 +112,52 @@ async def ytdl_fallback_download(link: str, download_type: str, title: str = Non
         LOGGER.error(f"yt-dlp fallback error: {str(e)}")
         return None
 
-# 🎵 3. JIOSAAVN SOURCE-HOPPING (PRIMARY FALLBACK)
+# 🎵 3. SPOTIFY SOURCE-HOPPING (FIRST FALLBACK)
+async def spotify_fallback_download(title: str) -> str:
+    if not title: return None
+    os.makedirs(DOWNLOAD_DIR, exist_ok=True)
+    
+    clean_title = re.sub(r'\(.*?\)|\[.*?\]|official|video|audio|lyric', '', title, flags=re.IGNORECASE).strip()
+    filename = get_safe_filename(clean_title, f"sp_{int(time.time())}")
+    file_path = os.path.join(DOWNLOAD_DIR, f"{filename}.mp3")
+
+    try:
+        async with aiohttp.ClientSession() as session:
+            # Replace this URL if you find a better/different Spotify API
+            api_url = f"https://api.spotifydown.com/search?q={clean_title}" 
+            
+            async with session.get(api_url) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    
+                    if data.get("success") and data.get("tracks"):
+                        best_track_url = data["tracks"][0].get("downloadUrl") 
+                        
+                        if best_track_url:
+                            async with session.get(best_track_url) as song_resp:
+                                if song_resp.status == 200:
+                                    with open(file_path, "wb") as f:
+                                        async for chunk in song_resp.content.iter_chunked(131072):
+                                            f.write(chunk)
+                                            
+                                    if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
+                                        LOGGER.info(f"🟢 SOURCE-HOPPING SUCCESS: Downloaded '{clean_title}' from Spotify!")
+                                        return file_path
+    except Exception as e:
+        LOGGER.error(f"Spotify fallback error: {str(e)}")
+    return None
+
+# 🎵 4. JIOSAAVN SOURCE-HOPPING (SECOND FALLBACK)
 async def jiosaavn_fallback_download(title: str) -> str:
     if not title: return None
     os.makedirs(DOWNLOAD_DIR, exist_ok=True)
     
-    # Remove tags like (Official Video) for better search matching
     clean_title = re.sub(r'\(.*?\)|\[.*?\]|official|video|audio|lyric', '', title, flags=re.IGNORECASE).strip()
     filename = get_safe_filename(clean_title, f"js_{int(time.time())}")
     file_path = os.path.join(DOWNLOAD_DIR, f"{filename}.mp3")
 
     try:
         async with aiohttp.ClientSession() as session:
-            # Using a public JioSaavn API to fetch song details
             async with session.get(f"https://saavn.dev/api/search/songs?query={clean_title}") as resp:
                 if resp.status == 200:
                     data = await resp.json()
@@ -132,7 +165,6 @@ async def jiosaavn_fallback_download(title: str) -> str:
                         song_data = data["data"]["results"][0]
                         download_urls = song_data.get("downloadUrl", [])
                         if download_urls:
-                            # Fetch the highest quality format (usually 320kbps)
                             best_url = download_urls[-1]["url"]
                             async with session.get(best_url) as song_resp:
                                 if song_resp.status == 200:
@@ -146,7 +178,7 @@ async def jiosaavn_fallback_download(title: str) -> str:
         LOGGER.error(f"JioSaavn fallback error: {str(e)}")
     return None
 
-# 🎵 4. SOUNDCLOUD SOURCE-HOPPING (ULTIMATE FALLBACK)
+# 🎵 5. SOUNDCLOUD SOURCE-HOPPING (ULTIMATE FALLBACK)
 async def soundcloud_fallback_download(title: str) -> str:
     if not title: return None
     os.makedirs(DOWNLOAD_DIR, exist_ok=True)
@@ -178,7 +210,6 @@ async def soundcloud_fallback_download(title: str) -> str:
         LOGGER.error(f"SoundCloud fallback error: {str(e)}")
     return None
 
-
 # 🎧 MAIN AUDIO ENGINE
 async def download_song(link: str, title: str = None) -> str:
     video_id = link.split("v=")[-1].split("&")[0] if "v=" in link else link
@@ -201,9 +232,13 @@ async def download_song(link: str, title: str = None) -> str:
     yt_result = await ytdl_fallback_download(link, "audio", title)
     if yt_result: return yt_result
     
-    # Phase 3 & 4: Source Hopping (JioSaavn -> SoundCloud)
+    # Phase 3, 4 & 5: Source Hopping (Spotify -> JioSaavn -> SoundCloud)
     if title:
-        LOGGER.warning(f"🔴 YouTube blocked '{title}'. Hopping to JioSaavn...")
+        LOGGER.warning(f"🔴 YouTube blocked '{title}'. Hopping to Spotify...")
+        sp_result = await spotify_fallback_download(title)
+        if sp_result: return sp_result
+
+        LOGGER.warning(f"🔴 Spotify failed. Hopping to JioSaavn...")
         js_result = await jiosaavn_fallback_download(title)
         if js_result: return js_result
 
