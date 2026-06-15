@@ -1,30 +1,42 @@
 from pyrogram.types import InlineKeyboardButton
 from enum import Enum
 
-# Button ke styles define karne ke liye Enum
+# Button ke styles
 class ButtonStyle(Enum):
     SUCCESS = "success"
     PRIMARY = "primary"
     DANGER = "danger"
+    SECONDARY = "secondary" # ✅ Error fixed: Added SECONDARY
+    INFO = "info"           # ✅ Added for future use
 
-def styled_button(text: str, callback_data: str = None, url: str = None, user_id: int = None, style: ButtonStyle = ButtonStyle.PRIMARY):
+def styled_button(
+    text: str, 
+    callback_data: str = None, 
+    url: str = None, 
+    user_id: int = None, 
+    style: ButtonStyle = ButtonStyle.PRIMARY,
+    **kwargs
+):
     """
-    Yeh ek custom wrapper hai Pyrogram ke InlineKeyboardButton ke liye.
-    Isse aapka code clean rehta hai aur buttons systematically organize hote hain.
+    Styled Button: Yeh function style aur extra arguments 
+    (jaise icon_custom_emoji_id) ko support karta hai.
     """
     
-    # Agar URL diya hai toh URL wala button banega
+    # Base arguments setup
+    params = {"text": text}
+    
+    # Callback, URL ya User ID handle karein
     if url:
-        return InlineKeyboardButton(text=text, url=url)
-        
-    # Agar user_id di hai toh User mention wala button banega
+        params["url"] = url
     elif user_id:
-        return InlineKeyboardButton(text=text, user_id=user_id)
-        
-    # Agar callback_data diya hai toh standard callback button banega (Sabse zyada use hone wala)
+        params["user_id"] = user_id
     elif callback_data:
-        return InlineKeyboardButton(text=text, callback_data=callback_data)
-        
-    # Fallback agar galti se kuch pass nahi kiya gaya
+        params["callback_data"] = callback_data
     else:
-        return InlineKeyboardButton(text=text, callback_data="none")
+        params["callback_data"] = "none"
+        
+    # Style aur extra arguments add karein (Emoji, etc.)
+    params["style"] = style.value
+    params.update(kwargs)
+    
+    return InlineKeyboardButton(**params)
