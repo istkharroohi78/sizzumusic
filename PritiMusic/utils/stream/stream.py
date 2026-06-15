@@ -1,5 +1,6 @@
 import os
 import random
+import asyncio
 from typing import Union
 
 from pyrogram.types import InlineKeyboardMarkup
@@ -21,6 +22,12 @@ def get_random_img(img_list):
             return random.choice(img_list)
         return img_list
     return "https://telegra.ph/file/2e3d368e77c449c287430.jpg"
+
+# ⚡ SPEED OPTIMIZATION: Background Delete Task
+async def safe_delete(message):
+    if not message: return
+    try: await message.delete()
+    except: pass
 
 async def stream(
     _, mystic, user_id, result, chat_id, user_name, original_chat_id,
@@ -50,6 +57,10 @@ async def stream(
                 status = True if video else None
                 file_path, direct = await YouTube.download(vidid, mystic, video=status, videoid=True)
                 if not file_path or str(file_path) == "None": raise AssistantErr(_["play_14"])
+                
+                # ⚡ Run Delete in Background to boost speed
+                asyncio.create_task(safe_delete(mystic))
+                
                 await Lucky.join_call(chat_id, original_chat_id, file_path, video=status, image=thumbnail)
                 await put_queue(chat_id, original_chat_id, file_path if direct else f"vid_{vidid}", title, duration_min, user_name, vidid, user_id, "video" if video else "audio", forceplay=forceplay)
                 
@@ -62,6 +73,7 @@ async def stream(
                     db[chat_id][0]["markup"] = "stream"
         if count == 0: return
         else:
+            asyncio.create_task(safe_delete(mystic)) # Backup Delete
             link = await LuckyBin(msg)
             carbon = await Carbon.generate(msg, random.randint(100, 10000000))
             return await app.send_photo(original_chat_id, photo=carbon, caption=_["play_21"].format(position, link), reply_markup=close_markup(_), has_spoiler=False)
@@ -72,6 +84,9 @@ async def stream(
         file_path, direct = await YouTube.download(vidid, mystic, videoid=True, video=status)
         if not file_path or str(file_path) == "None": raise AssistantErr(_["play_14"])
         
+        # ⚡ Run Delete in Background to boost speed
+        asyncio.create_task(safe_delete(mystic))
+        
         if await is_active_chat(chat_id):
             await put_queue(chat_id, original_chat_id, file_path if direct else f"vid_{vidid}", title, duration_min, user_name, vidid, user_id, "video" if video else "audio")
             position = len(db.get(chat_id)) - 1
@@ -80,6 +95,7 @@ async def stream(
             if not forceplay: db[chat_id] = []
             await Lucky.join_call(chat_id, original_chat_id, file_path, video=status, image=thumbnail)
             await put_queue(chat_id, original_chat_id, file_path if direct else f"vid_{vidid}", title, duration_min, user_name, vidid, user_id, "video" if video else "audio", forceplay=forceplay)
+            
             img = await get_thumb(vidid, user_id, app)
             if not img: img = get_random_img(config.PLAYLIST_IMG_URL)
             run = await app.send_photo(original_chat_id, photo=img, caption=_["stream_1"].format(f"https://t.me/{app.username}?start=info_{vidid}", title[:23], duration_min, user_name), reply_markup=InlineKeyboardMarkup(stream_markup(_, chat_id)), has_spoiler=False)
@@ -91,6 +107,10 @@ async def stream(
     elif streamtype == "live":
         link, vidid, title, thumbnail = result["link"], result["vidid"], (result["title"]).title(), result["thumb"]
         status = True if video else None
+        
+        # ⚡ Run Delete in Background to boost speed
+        asyncio.create_task(safe_delete(mystic))
+        
         if await is_active_chat(chat_id):
             await put_queue(chat_id, original_chat_id, f"live_{vidid}", title, "Live", user_name, vidid, user_id, "video" if video else "audio")
             position = len(db.get(chat_id)) - 1
@@ -101,6 +121,7 @@ async def stream(
             if n == 0 or not file_path or str(file_path) == "None": raise AssistantErr(_["str_3"])
             await Lucky.join_call(chat_id, original_chat_id, file_path, video=status, image=thumbnail)
             await put_queue(chat_id, original_chat_id, f"live_{vidid}", title, "Live", user_name, vidid, user_id, "video" if video else "audio", forceplay=forceplay)
+            
             img = await get_thumb(vidid, user_id, app)
             if not img: img = get_random_img(config.PLAYLIST_IMG_URL)
             run = await app.send_photo(original_chat_id, photo=img, caption=_["stream_1"].format(f"https://t.me/{app.username}?start=info_{vidid}", title[:23], "Live", user_name), reply_markup=InlineKeyboardMarkup(stream_markup(_, chat_id)), has_spoiler=False)
