@@ -1,7 +1,6 @@
 from pyrogram import filters, Client
 from pyrogram.types import Message
 
-from PritiMusic import app
 from PritiMusic.core.call import Lucky
 from PritiMusic.utils.database import set_loop
 from PritiMusic.utils.inline import close_markup
@@ -14,14 +13,15 @@ from PritiMusic.cplugin.utils.decorators.admins import AdminRightsCheck
 @Client.on_message(
     filters.command(
         ["end", "stop", "cend", "cstop"],
-        prefixes=["/", "!", "%", ",", "", ".", "@", "#"],
+        # 🟢 THE FIX: Removed the empty string "" to prevent random triggers in normal chat
+        prefixes=["/", "!", "#"],
     )
     & filters.group
     & ~BANNED_USERS
 )
 @AdminRightsCheck # <-- Ab ye Clone Owner/Sudo ko allow karega
 async def stop_music(cli, message: Message, _, chat_id):
-    if not len(message.command) == 1:
+    if len(message.command) != 1:
         return
     
     # Stream Stop Karega
