@@ -1,4 +1,5 @@
 import os
+import asyncio
 from config import autoclean
 from PritiMusic import LOGGER
 
@@ -10,6 +11,9 @@ async def auto_clean(popped):
         rem = popped.get("file")
         if not rem:
             return
+
+        # 🟢 THE FIX: 2 second ka delay taaki PyTgCalls aur FFmpeg file handle ko properly close kar dein
+        await asyncio.sleep(2)
 
         # List se current song ko remove karo (Clone aur Main bot dono isi list ko use karte hain)
         try:
