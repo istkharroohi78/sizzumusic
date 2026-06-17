@@ -35,21 +35,33 @@ from strings import get_string
 from PritiMusic.utils.thumbnails import get_thumb
 
 # ==========================================
-# 🛑 GLOBAL ERROR BYPASS
+# 🛑 GLOBAL ERROR LOGGER (NO SILENT FAILURES)
 # ==========================================
 def handle_asyncio_exceptions(loop, context):
     msg = context.get("exception", context.get("message"))
-    msg_str = str(msg)
-    if "GROUPCALL_FORBIDDEN" in msg_str or "SetVideoCallStatus" in msg_str or "GROUPCALL_INVALID" in msg_str:
-        pass 
+    msg_str = str(msg).lower()
+    
+    # Identify expected Telegram API state sync exceptions
+    expected_sync_events = [
+        "groupcall_forbidden", 
+        "setvideocallstatus", 
+        "groupcall_invalid", 
+        "no active group call", 
+        "group call has already ended"
+    ]
+    
+    if any(err in msg_str for err in expected_sync_events):
+        # 🟢 Logger mein dikhayega par as INFO, taaki terminal red error se spam na ho
+        logging.getLogger("asyncio").info(f"ℹ️ VC State Sync (Harmless): {msg}")
     else:
-        logging.getLogger("asyncio").error(f"Unhandled Asyncio Error: {msg}")
+        # 🔴 Baki saare genuine errors ERROR format mein dikhenge
+        logging.getLogger("asyncio").error(f"❌ Unhandled Asyncio Error: {msg}")
 
 try:
+    loop = asyncio.get_running_loop()
+except RuntimeError:
     loop = asyncio.get_event_loop()
-    loop.set_exception_handler(handle_asyncio_exceptions)
-except Exception:
-    pass
+loop.set_exception_handler(handle_asyncio_exceptions)
 
 autoend = {}
 counter = {}
@@ -203,6 +215,7 @@ class Call(PyTgCalls):
             try: await assistant.resume_stream(chat_id)
             except: pass
 
+    # 🟢 MAIN FIX HERE: Only making the *Active* Assistant leave, completely solving Clone Bot clashes!
     async def stop_stream(self, chat_id: int, assistant_type=None):
         try:
             chat_id = int(chat_id)
@@ -212,17 +225,21 @@ class Call(PyTgCalls):
         try: await _clear_(chat_id)
         except: pass
         
-        all_assistants = [self.one, self.two, self.three, self.four, self.five]
-        for idx, assistant in enumerate(all_assistants):
+        # 🟢 Sirf usi assistant ko bulao jo is chat me active hai (Clone ya Main)
+        active_assistants = await self.get_active_clients(chat_id)
+        for assistant in active_assistants:
             if assistant:
                 try: 
-                    # 🟢 UPDATED FIX: leave_call() method 
                     await assistant.leave_call(chat_id)
-                    LOGGER(__name__).info(f"✅ Assistant {idx+1} left VC successfully.")
+                    LOGGER(__name__).info(f"✅ Assistant left VC successfully in chat {chat_id}.")
                 except Exception as e: 
                     error_msg = str(e).lower()
-                    if "not in a call" not in error_msg and "not active" not in error_msg:
-                        LOGGER(__name__).error(f"❌ Assistant {idx+1} failed to leave VC: {e}")
+                    ignore_list = ["no active group call", "already ended", "not in a call", "groupcall_forbidden", "groupcall_invalid"]
+                    
+                    if any(ign in error_msg for ign in ignore_list):
+                        LOGGER(__name__).info(f"ℹ️ Assistant State Sync: VC already closed in {chat_id}.")
+                    else:
+                        LOGGER(__name__).error(f"❌ Assistant failed to leave VC in {chat_id}: {e}")
                     
         if chat_id in self.active_clients: 
             del self.active_clients[chat_id]
@@ -233,16 +250,20 @@ class Call(PyTgCalls):
         except:
             pass
             
-        all_assistants = [self.one, self.two, self.three, self.four, self.five]
-        for idx, assistant in enumerate(all_assistants):
+        # 🟢 Sirf usi assistant ko bulao jo is chat me active hai
+        active_assistants = await self.get_active_clients(chat_id)
+        for assistant in active_assistants:
             if assistant:
                 try: 
-                    # 🟢 UPDATED FIX: leave_call() method
                     await assistant.leave_call(chat_id)
                 except Exception as e: 
                     error_msg = str(e).lower()
-                    if "not in a call" not in error_msg and "not active" not in error_msg:
-                        LOGGER(__name__).error(f"❌ Assistant {idx+1} force-leave failed: {e}")
+                    ignore_list = ["no active group call", "already ended", "not in a call", "groupcall_forbidden", "groupcall_invalid"]
+                    
+                    if any(ign in error_msg for ign in ignore_list):
+                        LOGGER(__name__).info(f"ℹ️ Assistant State Sync: VC already closed in {chat_id} (Force).")
+                    else:
+                        LOGGER(__name__).error(f"❌ Assistant force-leave failed in {chat_id}: {e}")
                     
         if chat_id in self.active_clients: 
             del self.active_clients[chat_id]
@@ -446,7 +467,8 @@ class Call(PyTgCalls):
                 await _clear_(chat_id)
                 if chat_id in self.active_clients: del self.active_clients[chat_id]
                 try: await client.leave_call(chat_id) 
-                except: pass
+                except Exception as e:
+                    logging.getLogger("asyncio").info(f"ℹ️ Client leave sync: {e}")
                 return
 
         except Exception as e:
