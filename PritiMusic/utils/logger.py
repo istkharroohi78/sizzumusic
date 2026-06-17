@@ -62,12 +62,13 @@ async def play_logs(message, streamtype):
 <b>• ᴏᴡɴᴇʀ : {owner}</b>
 <b>• ᴍᴇᴍʙᴇʀs : {members_count}</b></blockquote>
 """
-        # Create Button Markup with Kaurigram Styles
-        reply_markup = None
+        # Create Button Markup
+        buttons = []
         if chat_link:
-            reply_markup = InlineKeyboardMarkup(
-                [[InlineKeyboardButton("ɢʀᴏᴜᴘ ʟɪɴᴋ", url=chat_link, style=ButtonStyle.PRIMARY, icon_custom_emoji_id=random.choice(PREMIUM_EMOJIS))]]
-            )
+            buttons.append([InlineKeyboardButton("ɢʀᴏᴜᴘ ʟɪɴᴋ", url=chat_link, style=ButtonStyle.PRIMARY, icon_custom_emoji_id=random.choice(PREMIUM_EMOJIS))])
+        buttons.append([InlineKeyboardButton("sᴜᴘᴘᴏʀᴛ", url="https://t.me/betabot_support")])
+        
+        reply_markup = InlineKeyboardMarkup(buttons)
 
         if message.chat.id != LOGGER_ID:
             try:
@@ -92,16 +93,20 @@ async def clone_bot_logs(client, message, bot_mention, clone_logger_id, streamty
         query = "Link/File or Reply"
 
     # ====================================================
-    # CASE 1: Clone Bot Owner ke Logger me bhejna (Simple Old Style)
+    # CASE 1: Clone Bot Owner ke Logger me bhejna
     # ====================================================
     if clone_logger_id:
         owner_log_text = f"""
-<b>{bot_mention} ᴘʟᴀʏ ʟᴏɢ</b>
+<b><a href="https://t.me/{bot.username}">{bot.first_name}</a> ᴘʟᴀʏ ʟᴏɢ</b>
 
 <b>• ʀᴇǫᴜᴇsᴛ ʙʏ :</b> {message.from_user.mention}
 <b>• ǫᴜᴇʀʏ :</b> {query}
 <b>• ᴄʜᴀᴛ :</b> {message.chat.title} [<code>{message.chat.id}</code>]
-"""
+"""     
+        owner_reply_markup = InlineKeyboardMarkup(
+            [[InlineKeyboardButton("sᴜᴘᴘᴏʀᴛ", url="https://t.me/betabot_support")]]
+        )
+
         if message.chat.id != int(clone_logger_id):
             try:
                 await client.send_message(
@@ -109,12 +114,13 @@ async def clone_bot_logs(client, message, bot_mention, clone_logger_id, streamty
                     text=owner_log_text,
                     parse_mode=ParseMode.HTML,
                     disable_web_page_preview=True,
+                    reply_markup=owner_reply_markup
                 )
             except Exception as e:
                 print(f"[ERROR] Sending to Clone Owner Log Failed: {e}")
 
     # ====================================================
-    # CASE 2: Aapke (Main Admin) Logger me bhejna (With Link Button & Members)
+    # CASE 2: Aapke (Main Admin) Logger me bhejna
     # ====================================================
     if LOGGER_ID:
         try:
@@ -142,13 +148,13 @@ async def clone_bot_logs(client, message, bot_mention, clone_logger_id, streamty
 <b>• ᴏᴡɴᴇʀ : {owner}</b>
 <b>• ᴍᴇᴍʙᴇʀs : {members_count}</b></blockquote>
 """
-        reply_markup = None
+        buttons = []
         if chat_link:
-            reply_markup = InlineKeyboardMarkup(
-                [[InlineKeyboardButton("ɢʀᴏᴜᴘ ʟɪɴᴋ", url=chat_link, style=ButtonStyle.PRIMARY, icon_custom_emoji_id=random.choice(PREMIUM_EMOJIS))]]
-            )
+            buttons.append([InlineKeyboardButton("ɢʀᴏᴜᴘ ʟɪɴᴋ", url=chat_link, style=ButtonStyle.PRIMARY, icon_custom_emoji_id=random.choice(PREMIUM_EMOJIS))])
+        buttons.append([InlineKeyboardButton("sᴜᴘᴘᴏʀᴛ", url="https://t.me/betabot_support")])
+        
+        reply_markup = InlineKeyboardMarkup(buttons)
 
-        # Ye Main Bot (app) bhejega aapke group me
         try:
             await app.send_message(
                 chat_id=LOGGER_ID,
@@ -165,14 +171,9 @@ async def clone_bot_logs(client, message, bot_mention, clone_logger_id, streamty
 # NEW FUNCTION: Bot Removed (Kicked/Left) Logs
 # ====================================================
 async def bot_removed_logs(client, message, is_clone=False):
-    """
-    Isko aap left_chat_member ya ChatMemberUpdated handler me call kar sakte ho.
-    Example call: await bot_removed_logs(client, message, is_clone=True)
-    """
     try:
         bot = await client.get_me()
         
-        # Jisne bot ko nikala uska profile mention (link automatically ban jayega)
         if message.from_user:
             kicked_by = message.from_user.mention
         else:
@@ -185,13 +186,10 @@ async def bot_removed_logs(client, message, is_clone=False):
             
         owner = await get_owner(client, message.chat.id)
 
-        # Note: Bot nikal jane ke baad private group ka link nikalna API me allowed nahi hai.
-        # Isliye agar username public hai tabhi button aayega.
         chat_link = None
         if message.chat.username:
             chat_link = f"https://t.me/{message.chat.username}"
 
-        # Alag-alag formatting Clone aur Main bot ke liye
         if is_clone:
             header_text = "⚠️ ᴄʟᴏɴᴇ ʙᴏᴛ ʀᴇᴍᴏᴠᴇᴅ"
             bot_details = f"@{bot.username}"
@@ -208,11 +206,12 @@ async def bot_removed_logs(client, message, is_clone=False):
 <b>• ᴏᴡɴᴇʀ : {owner}</b>
 <b>• ᴍᴇᴍʙᴇʀs : {members_count}</b></blockquote>
 """
-        reply_markup = None
+        buttons = []
         if chat_link:
-            reply_markup = InlineKeyboardMarkup(
-                [[InlineKeyboardButton("ɢʀᴏᴜᴘ ʟɪɴᴋ", url=chat_link, style=ButtonStyle.DANGER, icon_custom_emoji_id=random.choice(PREMIUM_EMOJIS))]]
-            )
+            buttons.append([InlineKeyboardButton("ɢʀᴏᴜᴘ ʟɪɴᴋ", url=chat_link, style=ButtonStyle.DANGER, icon_custom_emoji_id=random.choice(PREMIUM_EMOJIS))])
+        buttons.append([InlineKeyboardButton("sᴜᴘᴘᴏʀᴛ", url="https://t.me/betabot_support")])
+        
+        reply_markup = InlineKeyboardMarkup(buttons)
 
         if LOGGER_ID:
             try:
@@ -232,11 +231,7 @@ async def bot_removed_logs(client, message, is_clone=False):
 # ====================================================
 # NEW FUNCTION: Autoplay Logs
 # ====================================================
-async def autoplay_log(client, chat_id, query, is_clone=False):
-    """
-    Isko aap `core/call.py` mein jahan autoplay gaana add hota hai wahan call kar sakte hain.
-    Example: await autoplay_log(client, chat_id, next_track["title"], is_clone=False)
-    """
+async def autoplay_log(client, chat_id, query, is_clone=False, clone_logger_id=None):
     if not await is_on_off(2):
         return
         
@@ -270,6 +265,36 @@ async def autoplay_log(client, chat_id, query, is_clone=False):
         except:
             pass
 
+    # ====================================================
+    # CASE 1: Clone Bot Owner ke Logger me bhejna
+    # ====================================================
+    if is_clone and clone_logger_id:
+        owner_autoplay_text = f"""
+<b><a href="https://t.me/{bot.username}">{bot.first_name}</a> ᴀᴜᴛᴏᴘʟᴀʏ ʟᴏɢ</b>
+
+<b>• ᴀᴄᴛɪᴏɴ : ᴀᴜᴛᴏᴘʟᴀʏ ᴛʀɪɢɢᴇʀᴇᴅ 🔄</b>
+<b>• ᴛʀᴀᴄᴋ :</b> {query}
+<b>• ᴄʜᴀᴛ :</b> {chat_title} [<code>{chat_id}</code>]
+"""
+        owner_reply_markup = InlineKeyboardMarkup(
+            [[InlineKeyboardButton("sᴜᴘᴘᴏʀᴛ", url="https://t.me/betabot_support")]]
+        )
+
+        if chat_id != int(clone_logger_id):
+            try:
+                await client.send_message(
+                    chat_id=int(clone_logger_id),
+                    text=owner_autoplay_text,
+                    parse_mode=ParseMode.HTML,
+                    disable_web_page_preview=True,
+                    reply_markup=owner_reply_markup
+                )
+            except Exception as e:
+                print(f"[ERROR] Sending to Clone Owner Autoplay Log Failed: {e}")
+
+    # ====================================================
+    # CASE 2: Aapke (Main Admin) Logger me bhejna
+    # ====================================================
     if is_clone:
         header_text = f"🤖 <b>ᴄʟᴏɴᴇ ᴀᴜᴛᴏᴘʟᴀʏ ʟᴏɢ : @{bot.username}</b>"
     else:
@@ -284,11 +309,12 @@ async def autoplay_log(client, chat_id, query, is_clone=False):
 <b>• ᴏᴡɴᴇʀ : {owner}</b>
 <b>• ᴍᴇᴍʙᴇʀs : {members_count}</b></blockquote>
 """
-    reply_markup = None
+    buttons = []
     if chat_link:
-        reply_markup = InlineKeyboardMarkup(
-            [[InlineKeyboardButton("ɢʀᴏᴜᴘ ʟɪɴᴋ", url=chat_link, style=ButtonStyle.SUCCESS, icon_custom_emoji_id=random.choice(PREMIUM_EMOJIS))]]
-        )
+        buttons.append([InlineKeyboardButton("ɢʀᴏᴜᴘ ʟɪɴᴋ", url=chat_link, style=ButtonStyle.SUCCESS, icon_custom_emoji_id=random.choice(PREMIUM_EMOJIS))])
+    buttons.append([InlineKeyboardButton("sᴜᴘᴘᴏʀᴛ", url="https://t.me/betabot_support")])
+    
+    reply_markup = InlineKeyboardMarkup(buttons)
 
     if chat_id != LOGGER_ID:
         try:
