@@ -1,5 +1,5 @@
 import random
-from pyrogram import filters
+from pyrogram import filters, Client
 from pyrogram.types import Message
 
 import config
@@ -19,7 +19,15 @@ from config import BANNED_USERS
     filters.command(["skip", "cskip", "next", "cnext"], prefixes=["/", "!"]) & filters.group & ~BANNED_USERS
 )
 @AdminRightsCheck
-async def skip(cli, message: Message, _, chat_id):
+async def skip(cli: Client, message: Message, _, chat_id):
+    
+    # 🛑 THE CLASH FIX (MAIN BOT): Agar command Clone Bot pe aayi hai, toh Main Bot ignore karega!
+    try:
+        if cli.me.id != app.id:
+            return
+    except Exception:
+        pass
+
     # Queue check karte hain
     check = db.get(chat_id)
     if not check:
