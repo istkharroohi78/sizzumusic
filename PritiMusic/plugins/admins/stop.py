@@ -1,30 +1,32 @@
 from pyrogram import filters, Client
 from pyrogram.types import Message
-from pyrogram.enums import ChatMemberStatus
+from pyrogram.enums import ChatMemberStatus 
 
-import config
-from PritiMusic import app
+import config 
+from PritiMusic import app # 🟢 Main bot ko pehchanne ke liye zaroori import
 from PritiMusic.core.call import Lucky
-from PritiMusic.misc import db  # ✅ SUDOERS hata diya gaya hai
 from PritiMusic.utils.database import set_loop
-from PritiMusic.utils.decorators import AdminRightsCheck
 from PritiMusic.utils.inline import close_markup
 from config import BANNED_USERS
+from PritiMusic.misc import db
 
-@app.on_message(
+# ✅ IMPORT NEW ADMIN CHECKER (For Clone Support)
+from PritiMusic.cplugin.utils.decorators.admins import AdminRightsCheck
+
+@Client.on_message(
     filters.command(
-        ["end", "stop", "cend", "cstop"], 
-        prefixes=["/", "!", "#"]
-    ) 
-    & filters.group 
+        ["end", "stop", "cend", "cstop"],
+        prefixes=["/", "!", "#"],
+    )
+    & filters.group
     & ~BANNED_USERS
 )
-@AdminRightsCheck
+@AdminRightsCheck 
 async def stop_music(cli: Client, message: Message, _, chat_id):
     
-    # 🛑 THE CLASH FIX (MAIN BOT): Agar command Clone Bot pe aayi hai, toh ignore karo!
+    # 🛑 THE CLASH FIX (CLONE BOT): Agar command Main Bot pe aayi hai, toh Clone bot chup rahega!
     try:
-        if cli.me.id != app.id:
+        if cli.me.id == app.id:
             return
     except Exception:
         pass
@@ -39,14 +41,14 @@ async def stop_music(cli: Client, message: Message, _, chat_id):
 
     if len(message.command) != 1:
         return
-        
+    
     # Stream Stop Karega
     await Lucky.stop_stream(chat_id)
     
     # Loop Reset Karega
     await set_loop(chat_id, 0)
     
-    # Queue Empty Karega
+    # Queue Empty (Safety Fix)
     try:
         db[chat_id] = []
     except Exception:
