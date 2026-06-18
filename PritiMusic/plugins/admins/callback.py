@@ -6,7 +6,7 @@ from pyrogram.types import CallbackQuery, InputMediaPhoto, InlineKeyboardMarkup
 import config
 from PritiMusic import app, YouTube
 from PritiMusic.core.call import Lucky
-from PritiMusic.misc import SUDOERS, db
+from PritiMusic.misc import db, SUDOERS # ✅ SUDOERS ko safely wapas add kar diya
 from PritiMusic.utils.database import (
     get_active_chats, get_lang, get_upvote_count, is_active_chat,
     is_music_playing, is_nonadmin_chat, music_off, music_on, set_loop, get_assistant
@@ -29,6 +29,14 @@ upvoters = {}
 @app.on_callback_query(filters.regex("settingsback_helper") & ~BANNED_USERS)
 @languageCB
 async def settings_back_helper(client, CallbackQuery, _):
+    
+    # 🛑 THE CLASH FIX (MAIN BOT)
+    try:
+        if client.me.id != app.id:
+            return
+    except Exception:
+        pass
+
     await CallbackQuery.answer()
     img = random.choice(config.START_IMG_URL) if isinstance(config.START_IMG_URL, list) else config.START_IMG_URL
     await CallbackQuery.edit_message_media(
@@ -40,6 +48,14 @@ async def settings_back_helper(client, CallbackQuery, _):
 @app.on_callback_query(filters.regex("ADMIN") & ~BANNED_USERS)
 @languageCB
 async def del_back_playlist(client, CallbackQuery, _):
+    
+    # 🛑 THE CLASH FIX (MAIN BOT)
+    try:
+        if client.me.id != app.id:
+            return
+    except Exception:
+        pass
+
     callback_data = CallbackQuery.data.strip()
     callback_request = callback_data.split(None, 1)[1]
     command, chat = callback_request.split("|")
@@ -55,13 +71,21 @@ async def del_back_playlist(client, CallbackQuery, _):
     
     mention = CallbackQuery.from_user.mention
     
-    # Check Admin/Sudo Rights
+    # 🟢 SUDOERS & ADMIN CHECK
     is_non_admin = await is_nonadmin_chat(chat_id)
     if not is_non_admin:
+        # Agar user SUDOER nahi hai, tabhi admin rights check karega
         if CallbackQuery.from_user.id not in SUDOERS:
-            admins = adminlist.get(chat_id)
-            if not admins or CallbackQuery.from_user.id not in admins:
-                return await CallbackQuery.answer(_["admin_14"], show_alert=True)
+            try:
+                member = await client.get_chat_member(chat_id, CallbackQuery.from_user.id)
+                if member.status.value not in ["administrator", "creator"]:
+                    admins = adminlist.get(chat_id)
+                    if not admins or CallbackQuery.from_user.id not in admins:
+                        return await CallbackQuery.answer(_["admin_14"], show_alert=True)
+            except Exception:
+                admins = adminlist.get(chat_id)
+                if not admins or CallbackQuery.from_user.id not in admins:
+                    return await CallbackQuery.answer(_["admin_14"], show_alert=True)
                 
     if command == "Pause":
         if not await is_music_playing(chat_id): return await CallbackQuery.answer(_["admin_1"], show_alert=True)
@@ -105,7 +129,6 @@ async def del_back_playlist(client, CallbackQuery, _):
             await CallbackQuery.answer("Skipping...", show_alert=True)
             txt = f"➻ sᴛʀᴇᴀᴍ sᴋɪᴩᴩᴇᴅ 🎄\n│ \n└ʙʏ : {mention} 🥀"
             try:
-                # 🟢 THE FIX: Safely trigger unified change_stream for proper Autoplay Sync
                 clients = await Lucky.get_active_clients(chat_id)
                 pytgcalls_client = clients[0] if clients else Lucky.one
                 await Lucky.change_stream(pytgcalls_client, chat_id)
@@ -120,7 +143,7 @@ async def del_back_playlist(client, CallbackQuery, _):
             db[chat_id][0]["played"] = 0
             
             # Safe Thumbnail Fetch
-            img = await get_thumb(check[0]["vidid"], CallbackQuery.from_user.id, client) or \
+            img = await get_thumb(check[0]["vidid"], CallbackQuery.from_user.id, CallbackQuery.from_user.first_name) or \
                   (random.choice(STREAM_IMG_URL) if isinstance(STREAM_IMG_URL, list) else STREAM_IMG_URL)
             
             await Lucky.skip_stream(chat_id, check[0]["file"], video=True if check[0]["streamtype"]=="video" else False)
