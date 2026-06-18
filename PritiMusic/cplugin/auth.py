@@ -11,7 +11,11 @@ from PritiMusic.utils.database import (
     get_authuser_names,
     save_authuser,
 )
-from PritiMusic.cplugin.utils.decorators.admins import AdminActual, language # 🟢 Clone decorator import
+
+# 🟢 THE FIX: Dono decorators ko unki sahi jagah se import kiya gaya hai
+from PritiMusic.cplugin.utils.decorators.admins import AdminActual 
+from PritiMusic.utils.decorators.language import language 
+
 from PritiMusic.utils.inline import close_markup
 from config import BANNED_USERS, adminlist
 
