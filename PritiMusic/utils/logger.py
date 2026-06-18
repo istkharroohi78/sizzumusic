@@ -15,6 +15,9 @@ PREMIUM_EMOJIS = [
     "5206380668048496464"
 ]
 
+# ✅ NEW: Add/Remove Picture URL
+ADD_REMOVE_PIC = "https://files.catbox.moe/10zwqs.jpg"
+
 # ====================================================
 # HELPER FUNCTION: To Fetch Group Owner
 # ====================================================
@@ -166,9 +169,74 @@ async def clone_bot_logs(client, message, bot_mention, clone_logger_id, streamty
         except Exception as e:
             print(f"[ERROR] Sending to Main Admin Log Failed: {e}")
 
+# ====================================================
+# NEW FUNCTION: Bot Added Logs (With Picture)
+# ====================================================
+async def bot_added_logs(client, message, is_clone=False):
+    try:
+        bot = await client.get_me()
+        
+        if message.from_user:
+            added_by = message.from_user.mention
+        else:
+            added_by = "<b>Unknown User</b>"
+        
+        try:
+            members_count = await client.get_chat_members_count(message.chat.id)
+        except:
+            members_count = "Unknown"
+            
+        owner = await get_owner(client, message.chat.id)
+
+        chat_link = None
+        if message.chat.username:
+            chat_link = f"https://t.me/{message.chat.username}"
+        else:
+            try:
+                chat_link = await client.export_chat_invite_link(message.chat.id)
+            except:
+                pass
+
+        if is_clone:
+            header_text = "🎉 ᴄʟᴏɴᴇ ʙᴏᴛ ᴀᴅᴅᴇᴅ"
+            bot_details = f"@{bot.username}"
+        else:
+            header_text = "🎉 ᴍᴀɪɴ ʙᴏᴛ ᴀᴅᴅᴇᴅ"
+            bot_details = app.mention
+
+        add_log_text = f"""
+<blockquote><b>{header_text}</b>
+
+<b>• ʙᴏᴛ : {bot_details}</b>
+<b>• ᴀᴅᴅᴇᴅ ʙʏ : {added_by}</b>
+<b>• ᴄʜᴀᴛ : {message.chat.title} [<code>{message.chat.id}</code>]</b>
+<b>• ᴏᴡɴᴇʀ : {owner}</b>
+<b>• ᴍᴇᴍʙᴇʀs : {members_count}</b></blockquote>
+"""
+        buttons = []
+        if chat_link:
+            buttons.append([InlineKeyboardButton("ɢʀᴏᴜᴘ ʟɪɴᴋ", url=chat_link, style=ButtonStyle.SUCCESS, icon_custom_emoji_id=random.choice(PREMIUM_EMOJIS))])
+        buttons.append([InlineKeyboardButton("sᴜᴘᴘᴏʀᴛ", url="https://t.me/betabot_support")])
+        
+        reply_markup = InlineKeyboardMarkup(buttons)
+
+        if LOGGER_ID:
+            try:
+                # 🟢 Changed from send_message to send_photo
+                await app.send_photo(
+                    chat_id=LOGGER_ID,
+                    photo=ADD_REMOVE_PIC,
+                    caption=add_log_text,
+                    parse_mode=ParseMode.HTML,
+                    reply_markup=reply_markup
+                )
+            except Exception as e:
+                print(f"[ERROR] Sending Add Log Failed: {e}")
+    except Exception as e:
+        print(f"[ERROR] Bot Added Log Generation Failed: {e}")
 
 # ====================================================
-# NEW FUNCTION: Bot Removed (Kicked/Left) Logs
+# UPDATED FUNCTION: Bot Removed Logs (With Picture)
 # ====================================================
 async def bot_removed_logs(client, message, is_clone=False):
     try:
@@ -215,11 +283,12 @@ async def bot_removed_logs(client, message, is_clone=False):
 
         if LOGGER_ID:
             try:
-                await app.send_message(
+                # 🟢 Changed from send_message to send_photo
+                await app.send_photo(
                     chat_id=LOGGER_ID,
-                    text=remove_log_text,
+                    photo=ADD_REMOVE_PIC,
+                    caption=remove_log_text,
                     parse_mode=ParseMode.HTML,
-                    disable_web_page_preview=True,
                     reply_markup=reply_markup
                 )
             except Exception as e:
@@ -229,7 +298,7 @@ async def bot_removed_logs(client, message, is_clone=False):
 
 
 # ====================================================
-# NEW FUNCTION: Autoplay Logs
+# Autoplay Logs
 # ====================================================
 async def autoplay_log(client, chat_id, query, is_clone=False, clone_logger_id=None):
     if not await is_on_off(2):
