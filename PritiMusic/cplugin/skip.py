@@ -7,32 +7,35 @@ from PritiMusic import app
 from PritiMusic.core.call import Lucky
 from PritiMusic.misc import db
 
-# ✅ Sirf jo zaroori hai wahi import kiya
+# ✅ Jo zaroori hai wahi import kiya gaya hai
 from PritiMusic.utils.database import get_loop
 from PritiMusic.utils.decorators import AdminRightsCheck
 from PritiMusic.utils.inline import close_markup
 from PritiMusic.utils.stream.autoclear import auto_clean
 from config import BANNED_USERS
 
-@app.on_message(
-    filters.command(["skip", "cskip", "next", "cnext"], prefixes=["/", "!"]) & filters.group & ~BANNED_USERS
+# 🟢 THE FIX 1: @Client.on_message aur Prefixes add kiye for Main & Clone
+@Client.on_message(
+    filters.command(["skip", "cskip", "next", "cnext"], prefixes=["/", "!", "#"]) 
+    & filters.group 
+    & ~BANNED_USERS
 )
 @AdminRightsCheck
 async def skip(cli: Client, message: Message, _, chat_id):
     
-    # 🛑 YAHAN SE 'cli.me.id != app.id' WALA BLOCK HATA DIYA GAYA HAI TAAKI CLONE KAAM KARE 🛑
+    # 🛑 YAHAN SE 'cli.me.id != app.id' WALA BLOCK HAMESHA KE LIYE HATA DIYA HAI 🛑
 
-    # Queue check karte hain
+    # 1. Queue check karte hain
     check = db.get(chat_id)
     if not check:
         return await message.reply_text(_["queue_2"])
         
-    # Loop on/off check
+    # 2. Loop on/off check
     loop = await get_loop(chat_id)
     if loop != 0:
         return await message.reply_text(_["admin_8"])
 
-    # Multi-skip logic (jaise /skip 3)
+    # 3. Multi-skip logic (jaise /skip 3)
     if len(message.command) > 1:
         state = message.text.split(None, 1)[1].strip()
         if state.isnumeric():
@@ -53,16 +56,19 @@ async def skip(cli: Client, message: Message, _, chat_id):
         else:
             return await message.reply_text(_["admin_10"])
     else:
-        return await message.reply_text(_["admin_11"].format(len(check)-1))
+        # Normal single skip ke case mein error avoid karne ke liye
+        if len(check) == 1:
+            pass # Aage badhne do, taaki aakhri track skip ho sake
+        else:
+            pass
 
-    # 🟢 THE REAL FIX FOR THE SCREENSHOT ERROR 🟢
+    # 🟢 THE FIX 2: REAL FIX FOR CLONE & MAIN SYNC 🟢
     try:
-        # 🔥 Pura lamba client nikalne wala code hata diya.
-        # call.py ab khud automatic handle karega jab hum None pass karenge.
+        # 🔥 call.py ab khud automatic handle karega jab hum None pass karenge
         await Lucky.change_stream(None, chat_id)
         
     except Exception as e:
-        # Agar koi error aata hai toh gracefully stop kar denge
+        # Agar koi internal error aata hai toh gracefully stop kar denge
         try:
             await message.reply_text(
                 text=_["admin_6"].format(message.from_user.mention, message.chat.title),
