@@ -11,7 +11,7 @@ from PritiMusic.utils.database import is_music_playing, music_off # 🟢 is_musi
 from config import BANNED_USERS
 
 # ✅ Kurigram Button Style Import
-from button import ButtonStyle
+from pyrogram.enums import ButtonStyle
 
 # ✅ IMPORT NEW ADMIN CHECKER
 from PritiMusic.cplugin.utils.decorators.admins import AdminRightsCheck
@@ -40,11 +40,16 @@ def action_btn(text, callback_data=None, url=None, style=ButtonStyle.PRIMARY, us
 # 🛑 PAUSE COMMAND EXECUTION
 # ==========================================
 
-@Client.on_message(filters.command(["pause", "cpause"]) & filters.group & ~BANNED_USERS)
+# 🟢 THE FIX: Prefixes add kiye taaki /, !, # teeno se command chale
+@Client.on_message(
+    filters.command(["pause", "cpause"], prefixes=["/", "!", "#"]) 
+    & filters.group 
+    & ~BANNED_USERS
+)
 @AdminRightsCheck 
 async def pause_admin(cli: Client, message: Message, _, chat_id):
     
-    # 🟢 THE FIX 1: BULLETPROOF ADMIN CHECK (Wapas lagaya gaya)
+    # 🟢 BULLETPROOF ADMIN CHECK
     if message.from_user.id not in config.SUDOERS:
         try:
             member = await cli.get_chat_member(chat_id, message.from_user.id)
@@ -53,7 +58,7 @@ async def pause_admin(cli: Client, message: Message, _, chat_id):
         except Exception:
             return await message.reply_text("❌ **Error: Admin rights verify nahi ho paye.**")
 
-    # 🟢 THE FIX 2: CHECK KARO KI KYA MUSIC CHAL BHI RAHA HAI?
+    # 🟢 CHECK KARO KI KYA MUSIC CHAL BHI RAHA HAI?
     if not await is_music_playing(chat_id):
         return await message.reply_text(_["admin_1"])
 
