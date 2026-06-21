@@ -22,12 +22,7 @@ from config import BANNED_USERS
 @AdminRightsCheck
 async def stop_music(cli: Client, message: Message, _, chat_id):
     
-    # 🛑 THE CLASH FIX (MAIN BOT): Agar command Clone Bot pe aayi hai, toh ignore karo!
-    try:
-        if cli.me.id != app.id:
-            return
-    except Exception:
-        pass
+    # 🛑 YAHAN SE 'cli.me.id != app.id' WALA BLOCK HATA DIYA GAYA HAI TAAKI CLONE BHI KAAM KARE 🛑
 
     # 🟢 PURE GROUP ADMIN CHECK (No SUDOERS)
     try:
@@ -40,7 +35,7 @@ async def stop_music(cli: Client, message: Message, _, chat_id):
     if len(message.command) != 1:
         return
         
-    # Stream Stop Karega
+    # Stream Stop Karega (Naya call.py ab automatically correct client dhundh lega)
     await Lucky.stop_stream(chat_id)
     
     # Loop Reset Karega
