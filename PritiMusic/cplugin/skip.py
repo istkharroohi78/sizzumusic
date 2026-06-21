@@ -14,19 +14,13 @@ from PritiMusic.utils.inline import close_markup
 from PritiMusic.utils.stream.autoclear import auto_clean
 from config import BANNED_USERS
 
-
 @app.on_message(
     filters.command(["skip", "cskip", "next", "cnext"], prefixes=["/", "!"]) & filters.group & ~BANNED_USERS
 )
 @AdminRightsCheck
 async def skip(cli: Client, message: Message, _, chat_id):
     
-    # 🛑 THE CLASH FIX (MAIN BOT): Agar command Clone Bot pe aayi hai, toh Main Bot ignore karega!
-    try:
-        if cli.me.id != app.id:
-            return
-    except Exception:
-        pass
+    # 🛑 YAHAN SE 'cli.me.id != app.id' WALA BLOCK HATA DIYA GAYA HAI TAAKI CLONE KAAM KARE 🛑
 
     # Queue check karte hain
     check = db.get(chat_id)
@@ -56,26 +50,16 @@ async def skip(cli: Client, message: Message, _, chat_id):
                             pass
                 else:
                     return await message.reply_text(_["admin_11"].format(count))
-            else:
-                return await message.reply_text(_["admin_10"])
         else:
-            return await message.reply_text(_["admin_11"].format(len(check)-1))
+            return await message.reply_text(_["admin_10"])
+    else:
+        return await message.reply_text(_["admin_11"].format(len(check)-1))
 
     # 🟢 THE REAL FIX FOR THE SCREENSHOT ERROR 🟢
     try:
-        # Sahi PyTgCalls client (assistant) nikalte hain taaki internal error na aaye
-        pytgcalls_client = Lucky.one
-        if chat_id in Lucky.active_clients:
-            val = Lucky.active_clients[chat_id]
-            if isinstance(val, list) and len(val) > 0:
-                pytgcalls_client = val[0]
-            elif val and not isinstance(val, list):
-                pytgcalls_client = val
-                
-        # 🔥 Pura lamba code replace karke seedha change_stream call
-        # Yeh khud current track pop karega, agla play karega aur message bhejega.
-        # Queue khali hui toh automatically Autoplay handle kar lega.
-        await Lucky.change_stream(pytgcalls_client, chat_id)
+        # 🔥 Pura lamba client nikalne wala code hata diya.
+        # call.py ab khud automatic handle karega jab hum None pass karenge.
+        await Lucky.change_stream(None, chat_id)
         
     except Exception as e:
         # Agar koi error aata hai toh gracefully stop kar denge
