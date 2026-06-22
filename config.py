@@ -22,6 +22,10 @@ MONGO_DB_URI = getenv("MONGO_DB_URI")
 # ✅ JioSaavn Working API Added Here
 JIOSAAVN_API = getenv("JIOSAAVN_API", "https://saavn.me/search/songs?query=")
 
+SHRUTI_API_URL = "https://api.shrutibots.site"
+SHRUTI_API_KEY = "ShrutiBotsC0WH1GowF2HkGoKv4F3y"
+
+
 YTPROXY_URL = getenv("YTPROXY_URL", 'https://tgapi.xbitcode.com')
 YT_API_KEY = getenv("YT_API_KEY" , 'xbit_kp3GFnAvdnFVDV3L6xACy-jbVBE5q5Cd')
 
