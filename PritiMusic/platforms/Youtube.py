@@ -16,7 +16,7 @@ DOWNLOAD_DIR = "downloads"
 LOGGER = logging.getLogger(__name__)
 
 SHRUTI_API_URL = "https://api.shrutibots.site"
-SHRUTI_API_KEY = "ShrutiBotsg3j1kfPzAV3zj6aoqnUr"
+SHRUTI_API_KEY = "ShrutiBotsC0WH1GowF2HkGoKv4F3y"
 
 def time_to_seconds(time_str):
     stringt = str(time_str)
