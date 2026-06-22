@@ -16,7 +16,7 @@ DOWNLOAD_DIR = "downloads"
 LOGGER = logging.getLogger(__name__)
 
 API_URL = os.environ.get("API_URL", "https://web.riteshyt.in")
-API_KEY = os.environ.get("API_KEY", "ritesh_free_6361d74f047ed86015df3fa8")
+API_KEY = os.environ.get("API_KEY", "ritesh_free_2c4562bb423051edeb73eabe")
 
 def time_to_seconds(time_str):
     stringt = str(time_str)
