@@ -15,8 +15,8 @@ from youtubesearchpython.__future__ import VideosSearch, Playlist
 DOWNLOAD_DIR = "downloads"
 LOGGER = logging.getLogger(__name__)
 
-API_URL = os.environ.get("API_URL", "https://web.riteshyt.in")
-API_KEY = os.environ.get("API_KEY", "ritesh_free_2c4562bb423051edeb73eabe")
+SHRUTI_API_URL = "https://api.shrutibots.site"
+SHRUTI_API_KEY = "ShrutiBotsg3j1kfPzAV3zj6aoqnUr"
 
 def time_to_seconds(time_str):
     stringt = str(time_str)
