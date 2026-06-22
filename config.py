@@ -12,10 +12,10 @@ BOT_TOKEN = getenv("BOT_TOKEN")
 BOT_ID = getenv("BOT_ID")
 
 OWNER_USERNAME = getenv("OWNER_USERNAME", "")
-BOT_USERNAME = getenv("BOT_USERNAME", "")
+BOT_USERNAME = getenv("BOT_USERNAME", "SizzuMusicBot")
 BOT_NAME = getenv("BOT_NAME", "")
 ASSUSERNAME = getenv("ASSUSERNAME", "")
-BOT_LINK = getenv("BOT_LINK", "https://t.me/clone_MUSICrobot")
+BOT_LINK = getenv("BOT_LINK", "https://t.me/SizzuMusicBot")
 
 MONGO_DB_URI = getenv("MONGO_DB_URI")
 
